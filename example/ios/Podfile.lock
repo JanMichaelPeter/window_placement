@@ -1,0 +1,28 @@
+PODS:
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+  - window_placement (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - window_placement (from `.symlinks/plugins/window_placement/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+  window_placement:
+    :path: ".symlinks/plugins/window_placement/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  window_placement: 044c28b3b6ee5be524ca5a2bd5794d43765370fa
+
+PODFILE CHECKSUM: 6719a65a1adb4b533a3ed40284c367a31b121c7e
+
+COCOAPODS: 1.16.2

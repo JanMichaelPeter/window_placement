@@ -1,0 +1,29 @@
+name: window_placement
+description: "A Flutter plugin capable of telling where an app is displayed on a mobile device display"
+version: 0.0.1
+repository: https://github.com/JanMichaelPeter/window_placement
+issue_tracker: https://github.com/JanMichaelPeter/window_placement/issues
+
+environment:
+  sdk: ^3.10.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  pigeon: ^27.3.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.github.janmichaelpeter.window_placement
+        pluginClass: WindowPlacementPlugin
+      ios:
+        pluginClass: WindowPlacementPlugin
