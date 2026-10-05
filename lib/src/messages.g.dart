@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-    List<Object?>? replyList,
-    String channelName, {
-    required bool isNullValid,
+  List<Object?>? replyList,
+  String channelName, {
+  required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -46,8 +46,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -95,7 +96,6 @@ int _deepHash(Object? value) {
   }
   return value.hashCode;
 }
-
 
 /// The app window and the display it is on, in logical pixels and display
 /// coordinates.
@@ -156,7 +156,8 @@ class WindowGeometry {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static WindowGeometry decode(Object result) {
     result as List<Object?>;
@@ -184,7 +185,17 @@ class WindowGeometry {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(windowX, other.windowX) && _deepEquals(windowY, other.windowY) && _deepEquals(windowWidth, other.windowWidth) && _deepEquals(windowHeight, other.windowHeight) && _deepEquals(screenWidth, other.screenWidth) && _deepEquals(screenHeight, other.screenHeight) && _deepEquals(screenInsetLeft, other.screenInsetLeft) && _deepEquals(screenInsetTop, other.screenInsetTop) && _deepEquals(screenInsetRight, other.screenInsetRight) && _deepEquals(screenInsetBottom, other.screenInsetBottom) && _deepEquals(isMultiWindow, other.isMultiWindow);
+    return _deepEquals(windowX, other.windowX) &&
+        _deepEquals(windowY, other.windowY) &&
+        _deepEquals(windowWidth, other.windowWidth) &&
+        _deepEquals(windowHeight, other.windowHeight) &&
+        _deepEquals(screenWidth, other.screenWidth) &&
+        _deepEquals(screenHeight, other.screenHeight) &&
+        _deepEquals(screenInsetLeft, other.screenInsetLeft) &&
+        _deepEquals(screenInsetTop, other.screenInsetTop) &&
+        _deepEquals(screenInsetRight, other.screenInsetRight) &&
+        _deepEquals(screenInsetBottom, other.screenInsetBottom) &&
+        _deepEquals(isMultiWindow, other.isMultiWindow);
   }
 
   @override
@@ -197,7 +208,6 @@ class WindowGeometry {
   }
 }
 
-
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -205,7 +215,7 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is WindowGeometry) {
+    } else if (value is WindowGeometry) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
     } else {
@@ -224,15 +234,21 @@ class _PigeonCodec extends StandardMessageCodec {
   }
 }
 
-const StandardMethodCodec pigeonMethodCodec = StandardMethodCodec(_PigeonCodec());
+const StandardMethodCodec pigeonMethodCodec = StandardMethodCodec(
+  _PigeonCodec(),
+);
 
 class WindowPlacementHostApi {
   /// Constructor for [WindowPlacementHostApi]. The [binaryMessenger] named argument is
   /// available for dependency injection. If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  WindowPlacementHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  WindowPlacementHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -241,7 +257,8 @@ class WindowPlacementHostApi {
 
   /// The current geometry, or null when no window is attached yet.
   Future<WindowGeometry?> getGeometry() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getGeometry$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getGeometry$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -251,11 +268,10 @@ class WindowPlacementHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
     return pigeonVar_replyValue as WindowGeometry?;
   }
 }
@@ -268,14 +284,15 @@ class WindowPlacementHostApi {
 /// not be called multiple times for the same `instanceName`. To deliver
 /// events to multiple listeners, call this method once and listen to the
 /// returned broadcast stream multiple times instead.
-Stream<WindowGeometry> geometryChanges( {String instanceName = ''}) {
+Stream<WindowGeometry> geometryChanges({String instanceName = ''}) {
   if (instanceName.isNotEmpty) {
     instanceName = '.$instanceName';
   }
-  final EventChannel geometryChangesChannel =
-      EventChannel('dev.flutter.pigeon.window_placement.WindowPlacementEventApi.geometryChanges$instanceName', pigeonMethodCodec);
+  final EventChannel geometryChangesChannel = EventChannel(
+    'dev.flutter.pigeon.window_placement.WindowPlacementEventApi.geometryChanges$instanceName',
+    pigeonMethodCodec,
+  );
   return geometryChangesChannel.receiveBroadcastStream().map((dynamic event) {
     return event as WindowGeometry;
   });
 }
-    
