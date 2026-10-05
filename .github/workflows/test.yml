@@ -22,7 +22,9 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test example/lib example/integration_test
+      # Generated Pigeon code (*.g.dart) keeps its own formatting.
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed $(git ls-files '*.dart' ':!:*.g.dart')
       - run: flutter analyze
       - run: flutter test
 
