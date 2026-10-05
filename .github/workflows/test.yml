@@ -75,9 +75,14 @@ jobs:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - name: Enable Swift Package Manager
-        if: matrix.dependency-manager == 'Swift Package Manager'
-        run: flutter config --enable-swift-package-manager
+      # The example uses Swift Package Manager. To check that the plugin still
+      # works with CocoaPods, switch it off and bring back the Podfile.
+      - name: Switch example to CocoaPods
+        if: matrix.dependency-manager == 'CocoaPods'
+        working-directory: example
+        run: |
+          sed -i '' 's/enable-swift-package-manager: true/enable-swift-package-manager: false/' pubspec.yaml
+          cp ../.github/ci/Podfile ios/Podfile
       - name: Pick simulator
         run: |
           UDID=$(xcrun simctl list devices available -j \
