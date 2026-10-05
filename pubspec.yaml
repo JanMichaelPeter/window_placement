@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  meta: ^1.17.0
   plugin_platform_interface: ^2.0.2
 
 dev_dependencies:
@@ -27,3 +28,5 @@ flutter:
         pluginClass: WindowPlacementPlugin
       ios:
         pluginClass: WindowPlacementPlugin
+  config:
+    enable-swift-package-manager: true
