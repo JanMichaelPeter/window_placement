@@ -77,6 +77,12 @@ dart run pigeon --input pigeons/messages.dart
 
 The generated files (`*.g.dart`, `*.g.swift`, `*.g.kt`) are checked in. Don't edit them by hand.
 
+### Releasing
+
+1. On a branch, run `tool/release.sh prepare 1.2.3`. It sets the version in `pubspec.yaml` and the podspec and adds a `CHANGELOG.md` section. Replace its TODO with the changes, then open a PR and merge it.
+2. On an up-to-date `main`, run `tool/release.sh tag`. It checks the versions and the CHANGELOG, runs `flutter pub publish --dry-run`, then asks before creating and pushing the `v1.2.3` tag.
+3. The tag starts the *Publish to pub.dev* workflow. Approve it in the `pub.dev` environment to publish.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

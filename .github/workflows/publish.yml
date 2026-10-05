@@ -32,13 +32,8 @@ jobs:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - name: Check tag matches pubspec version
-        run: |
-          VERSION=$(sed -n 's/^version: *//p' pubspec.yaml)
-          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match pubspec.yaml version $VERSION"
-            exit 1
-          fi
+      - name: Check tag and version files
+        run: tool/release.sh check "$GITHUB_REF_NAME"
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
