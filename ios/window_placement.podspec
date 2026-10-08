@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'window_placement'
-  s.version          = '0.0.1'
+  s.version          = '0.0.2'
   s.summary          = 'A Flutter plugin capable of telling where an app is displayed on a mobile device display'
   s.description      = <<-DESC
 A Flutter plugin capable of telling where an app is displayed on a mobile device display
