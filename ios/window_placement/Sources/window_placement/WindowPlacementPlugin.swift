@@ -130,8 +130,27 @@ private func barRegion(edge: BarEdge, extent: CGFloat) -> BarRegion? {
   case .right: rectEdge = .right
   case .bottom: rectEdge = .bottom
   }
-  let guide = view.layoutGuide(for: .bar(onEdge: rectEdge, extent: extent))
+  guard let guide = barLayoutGuide(in: view, edge: rectEdge, extent: extent) else { return nil }
   view.layoutIfNeeded()
   let frame = guide.layoutFrame
   return BarRegion(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height)
+}
+
+// `view.layoutGuide(for: .bar(onEdge:extent:))`, called through the Objective-C runtime:
+// apps built with an SDK before iOS 27.1 (Xcode 26) don't know `bar(onEdge:extent:)`, and
+// `#available` only guards the call at run time, not the compile. Nil where the method is
+// missing.
+private func barLayoutGuide(in view: UIView, edge: UIRectEdge, extent: CGFloat) -> UILayoutGuide? {
+  let regionSelector = NSSelectorFromString("layoutRegionForBarOnEdge:extent:")
+  let guideSelector = NSSelectorFromString("layoutGuideForLayoutRegion:")
+  guard let regionClass = NSClassFromString("UIViewLayoutRegion"),
+    let method = class_getClassMethod(regionClass, regionSelector),
+    view.responds(to: guideSelector)
+  else { return nil }
+  typealias MakeRegion = @convention(c) (AnyClass, Selector, UInt, CGFloat) -> AnyObject?
+  let makeRegion = unsafeBitCast(method_getImplementation(method), to: MakeRegion.self)
+  guard let region = makeRegion(regionClass, regionSelector, edge.rawValue, extent) else {
+    return nil
+  }
+  return view.perform(guideSelector, with: region)?.takeUnretainedValue() as? UILayoutGuide
 }
