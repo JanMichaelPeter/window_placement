@@ -72,10 +72,12 @@ jobs:
         dependency-manager: [CocoaPods, Swift Package Manager]
     steps:
       - uses: actions/checkout@v4
+      # Latest stable rather than the FLUTTER_VERSION floor: Flutter 3.35 can't
+      # attach to the app on the runner's current Xcode and simulator, so the
+      # integration tests time out. The Dart job still checks the floor.
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       # The example uses Swift Package Manager. To check that the plugin still
       # works with CocoaPods, switch it off and bring back the Podfile.
