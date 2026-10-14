@@ -14,6 +14,10 @@ public class WindowPlacementPlugin: NSObject, FlutterPlugin, WindowPlacementHost
   func getGeometry() throws -> WindowGeometry? {
     currentGeometry()
   }
+
+  func getBarRegion(edge: BarEdge, extent: Double) throws -> BarRegion? {
+    barRegion(edge: edge, extent: CGFloat(extent))
+  }
 }
 
 private class GeometryChangesHandler: GeometryChangesStreamHandler {
@@ -98,4 +102,55 @@ private func currentGeometry() -> WindowGeometry? {
     screenInsetBottom: 0,
     isMultiWindow: frame.size != screenBounds.size
   )
+}
+
+// MARK: - Bar regions
+
+// The view Flutter draws into, whose coordinates match Flutter's logical pixels.
+private func flutterView() -> UIView? {
+  guard let root = activeWindow()?.rootViewController else { return nil }
+  var stack = [root]
+  while let vc = stack.popLast() {
+    if vc is FlutterViewController { return vc.view }
+    stack.append(contentsOf: vc.children)
+    if let presented = vc.presentedViewController { stack.append(presented) }
+  }
+  return root.view
+}
+
+// UIKit's bar layout region (iOS 27.1): where a bar of this thickness fits along the edge,
+// clear of the status icons (a column at the side or a band at the top, depending on the
+// device and orientation), the corners and the home indicator.
+private func barRegion(edge: BarEdge, extent: CGFloat) -> BarRegion? {
+  guard #available(iOS 27.1, *), extent > 0, let view = flutterView() else { return nil }
+  let rectEdge: UIRectEdge
+  switch edge {
+  case .left: rectEdge = .left
+  case .top: rectEdge = .top
+  case .right: rectEdge = .right
+  case .bottom: rectEdge = .bottom
+  }
+  guard let guide = barLayoutGuide(in: view, edge: rectEdge, extent: extent) else { return nil }
+  view.layoutIfNeeded()
+  let frame = guide.layoutFrame
+  return BarRegion(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height)
+}
+
+// `view.layoutGuide(for: .bar(onEdge:extent:))`, called through the Objective-C runtime:
+// apps built with an SDK before iOS 27.1 (Xcode 26) don't know `bar(onEdge:extent:)`, and
+// `#available` only guards the call at run time, not the compile. Nil where the method is
+// missing.
+private func barLayoutGuide(in view: UIView, edge: UIRectEdge, extent: CGFloat) -> UILayoutGuide? {
+  let regionSelector = NSSelectorFromString("layoutRegionForBarOnEdge:extent:")
+  let guideSelector = NSSelectorFromString("layoutGuideForLayoutRegion:")
+  guard let regionClass = NSClassFromString("UIViewLayoutRegion"),
+    let method = class_getClassMethod(regionClass, regionSelector),
+    view.responds(to: guideSelector)
+  else { return nil }
+  typealias MakeRegion = @convention(c) (AnyClass, Selector, UInt, CGFloat) -> AnyObject?
+  let makeRegion = unsafeBitCast(method_getImplementation(method), to: MakeRegion.self)
+  guard let region = makeRegion(regionClass, regionSelector, edge.rawValue, extent) else {
+    return nil
+  }
+  return view.perform(guideSelector, with: region)?.takeUnretainedValue() as? UILayoutGuide
 }

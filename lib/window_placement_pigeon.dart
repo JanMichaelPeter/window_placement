@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart' show EdgeInsets;
 
 import 'window_placement_platform_interface.dart';
 import 'src/messages.g.dart';
+import 'src/window_edge.dart';
 import 'src/window_placement_info.dart';
 
 /// An implementation of [WindowPlacementPlatform] that talks to the native side
@@ -24,6 +25,19 @@ class PigeonWindowPlacement extends WindowPlacementPlatform {
   @override
   Stream<WindowPlacementInfo> get onPlacementChanged =>
       geometryChanges().map(toInfo).distinct();
+
+  @override
+  Future<Rect?> getBarRegion(WindowEdge edge, double extent) async {
+    final region = await _hostApi.getBarRegion(switch (edge) {
+      WindowEdge.left => BarEdge.left,
+      WindowEdge.top => BarEdge.top,
+      WindowEdge.right => BarEdge.right,
+      WindowEdge.bottom => BarEdge.bottom,
+    }, extent);
+    return region == null
+        ? null
+        : Rect.fromLTWH(region.x, region.y, region.width, region.height);
+  }
 
   /// Converts the native geometry into a classified [WindowPlacementInfo].
   @visibleForTesting

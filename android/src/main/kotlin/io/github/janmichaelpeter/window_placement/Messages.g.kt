@@ -192,6 +192,20 @@ class FlutterError (
   val details: Any? = null
 ) : RuntimeException()
 
+/** A physical edge of the app window. */
+enum class BarEdge(val raw: Int) {
+  LEFT(0),
+  TOP(1),
+  RIGHT(2),
+  BOTTOM(3);
+
+  companion object {
+    fun ofRaw(raw: Int): BarEdge? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /**
  * The app window and the display it is on, in logical pixels and display
  * coordinates.
@@ -278,12 +292,75 @@ data class WindowGeometry (
     return "WindowGeometry(windowX=$windowX, windowY=$windowY, windowWidth=$windowWidth, windowHeight=$windowHeight, screenWidth=$screenWidth, screenHeight=$screenHeight, screenInsetLeft=$screenInsetLeft, screenInsetTop=$screenInsetTop, screenInsetRight=$screenInsetRight, screenInsetBottom=$screenInsetBottom, isMultiWindow=$isMultiWindow)"
   }
 }
+
+/**
+ * A rectangle in the app window's coordinates, in logical pixels.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class BarRegion (
+  val x: Double,
+  val y: Double,
+  val width: Double,
+  val height: Double
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): BarRegion {
+      val x = pigeonVar_list[0] as Double
+      val y = pigeonVar_list[1] as Double
+      val width = pigeonVar_list[2] as Double
+      val height = pigeonVar_list[3] as Double
+      return BarRegion(x, y, width, height)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      x,
+      y,
+      width,
+      height,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as BarRegion
+    return MessagesPigeonUtils.deepEquals(this.x, other.x) && MessagesPigeonUtils.deepEquals(this.y, other.y) && MessagesPigeonUtils.deepEquals(this.width, other.width) && MessagesPigeonUtils.deepEquals(this.height, other.height)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.x)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.y)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.width)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.height)
+    return result
+  }
+  override fun toString(): String {
+    return "BarRegion(x=$x, y=$y, width=$width, height=$height)"
+  }
+}
 private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          BarEdge.ofRaw(it.toInt())
+        }
+      }
+      130.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           WindowGeometry.fromList(it)
+        }
+      }
+      131.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          BarRegion.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -291,8 +368,16 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is WindowGeometry -> {
+      is BarEdge -> {
         stream.write(129)
+        writeValue(stream, value.raw.toLong())
+      }
+      is WindowGeometry -> {
+        stream.write(130)
+        writeValue(stream, value.toList())
+      }
+      is BarRegion -> {
+        stream.write(131)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -306,6 +391,12 @@ val MessagesPigeonMethodCodec = StandardMethodCodec(MessagesPigeonCodec())
 interface WindowPlacementHostApi {
   /** The current geometry, or null when no window is attached yet. */
   fun getGeometry(): WindowGeometry?
+  /**
+   * Where the system places a bar [extent] thick along [edge], clear of the
+   * status icons, rounded corners and home indicator. Null where the platform
+   * has no such API (before iOS 27.1, Android) or no window is attached yet.
+   */
+  fun getBarRegion(edge: BarEdge, extent: Double): BarRegion?
 
   companion object {
     /** The codec used by WindowPlacementHostApi. */
@@ -322,6 +413,24 @@ interface WindowPlacementHostApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.getGeometry())
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getBarRegion$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val edgeArg = args[0] as BarEdge
+            val extentArg = args[1] as Double
+            val wrapped: List<Any?> = try {
+              listOf(api.getBarRegion(edgeArg, extentArg))
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)
             }

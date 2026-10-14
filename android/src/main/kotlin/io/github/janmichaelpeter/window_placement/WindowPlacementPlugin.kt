@@ -50,6 +50,9 @@ class WindowPlacementPlugin :
 
     override fun getGeometry(): WindowGeometry? = currentGeometry()
 
+    // Android has no bar layout region; callers fall back to the safe area.
+    override fun getBarRegion(edge: BarEdge, extent: Double): BarRegion? = null
+
     // ActivityAware
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {

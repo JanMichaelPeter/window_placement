@@ -184,6 +184,14 @@ private func nilOrValue<T>(_ value: Any?) -> T? {
 }
 
 
+/// A physical edge of the app window.
+enum BarEdge: Int, CaseIterable {
+  case left = 0
+  case top = 1
+  case right = 2
+  case bottom = 3
+}
+
 /// The app window and the display it is on, in logical pixels and display
 /// coordinates.
 ///
@@ -275,11 +283,71 @@ struct WindowGeometry: Hashable, CustomStringConvertible {
   }
 }
 
+/// A rectangle in the app window's coordinates, in logical pixels.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct BarRegion: Hashable, CustomStringConvertible {
+  var x: Double
+  var y: Double
+  var width: Double
+  var height: Double
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> BarRegion? {
+    let x = pigeonVar_list[0] as! Double
+    let y = pigeonVar_list[1] as! Double
+    let width = pigeonVar_list[2] as! Double
+    let height = pigeonVar_list[3] as! Double
+
+    return BarRegion(
+      x: x,
+      y: y,
+      width: width,
+      height: height
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      x,
+      y,
+      width,
+      height,
+    ]
+  }
+  static func == (lhs: BarRegion, rhs: BarRegion) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.x, rhs.x) && MessagesPigeonInternal.deepEquals(lhs.y, rhs.y) && MessagesPigeonInternal.deepEquals(lhs.width, rhs.width) && MessagesPigeonInternal.deepEquals(lhs.height, rhs.height)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("BarRegion")
+    MessagesPigeonInternal.deepHash(value: x, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: y, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: width, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: height, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "BarRegion(x: \(String(describing: x)), y: \(String(describing: y)), width: \(String(describing: width)), height: \(String(describing: height)))"
+  }
+}
+
 private class MessagesPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
     case 129:
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return BarEdge(rawValue: enumResultAsInt)
+      }
+      return nil
+    case 130:
       return WindowGeometry.fromList(self.readValue() as! [Any?])
+    case 131:
+      return BarRegion.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -288,8 +356,14 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
 
 private class MessagesPigeonCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? WindowGeometry {
+    if let value = value as? BarEdge {
       super.writeByte(129)
+      super.writeValue(value.rawValue)
+    } else if let value = value as? WindowGeometry {
+      super.writeByte(130)
+      super.writeValue(value.toList())
+    } else if let value = value as? BarRegion {
+      super.writeByte(131)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -317,6 +391,10 @@ var messagesPigeonMethodCodec = FlutterStandardMethodCodec(readerWriter: Message
 protocol WindowPlacementHostApi {
   /// The current geometry, or null when no window is attached yet.
   func getGeometry() throws -> WindowGeometry?
+  /// Where the system places a bar [extent] thick along [edge], clear of the
+  /// status icons, rounded corners and home indicator. Null where the platform
+  /// has no such API (before iOS 27.1, Android) or no window is attached yet.
+  func getBarRegion(edge: BarEdge, extent: Double) throws -> BarRegion?
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -338,6 +416,25 @@ class WindowPlacementHostApiSetup {
       }
     } else {
       getGeometryChannel.setMessageHandler(nil)
+    }
+    /// Where the system places a bar [extent] thick along [edge], clear of the
+    /// status icons, rounded corners and home indicator. Null where the platform
+    /// has no such API (before iOS 27.1, Android) or no window is attached yet.
+    let getBarRegionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getBarRegion\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getBarRegionChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let edgeArg = args[0] as! BarEdge
+        let extentArg = args[1] as! Double
+        do {
+          let result = try api.getBarRegion(edge: edgeArg, extent: extentArg)
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      getBarRegionChannel.setMessageHandler(nil)
     }
   }
 }

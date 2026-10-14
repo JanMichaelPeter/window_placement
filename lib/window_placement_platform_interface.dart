@@ -1,6 +1,9 @@
+import 'dart:ui' show Rect;
+
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'window_placement_pigeon.dart';
+import 'src/window_edge.dart';
 import 'src/window_placement_info.dart';
 
 /// The interface that platform implementations of window_placement extend.
@@ -34,4 +37,9 @@ abstract class WindowPlacementPlatform extends PlatformInterface {
   Stream<WindowPlacementInfo> get onPlacementChanged {
     throw UnimplementedError('onPlacementChanged has not been implemented.');
   }
+
+  /// Where the system places a bar [extent] thick along [edge], in window
+  /// coordinates, or null where the platform has no such API. Defaults to
+  /// null so implementations without it keep working.
+  Future<Rect?> getBarRegion(WindowEdge edge, double extent) async => null;
 }
