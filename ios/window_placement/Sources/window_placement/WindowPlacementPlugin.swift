@@ -14,6 +14,10 @@ public class WindowPlacementPlugin: NSObject, FlutterPlugin, WindowPlacementHost
   func getGeometry() throws -> WindowGeometry? {
     currentGeometry()
   }
+
+  func getBarRegion(edge: BarEdge, extent: Double) throws -> BarRegion? {
+    barRegion(edge: edge, extent: CGFloat(extent))
+  }
 }
 
 private class GeometryChangesHandler: GeometryChangesStreamHandler {
@@ -98,4 +102,36 @@ private func currentGeometry() -> WindowGeometry? {
     screenInsetBottom: 0,
     isMultiWindow: frame.size != screenBounds.size
   )
+}
+
+// MARK: - Bar regions
+
+// The view Flutter draws into, whose coordinates match Flutter's logical pixels.
+private func flutterView() -> UIView? {
+  guard let root = activeWindow()?.rootViewController else { return nil }
+  var stack = [root]
+  while let vc = stack.popLast() {
+    if vc is FlutterViewController { return vc.view }
+    stack.append(contentsOf: vc.children)
+    if let presented = vc.presentedViewController { stack.append(presented) }
+  }
+  return root.view
+}
+
+// UIKit's bar layout region (iOS 27.1): where a bar of this thickness fits along the edge,
+// clear of the status icons (a column at the side or a band at the top, depending on the
+// device and orientation), the corners and the home indicator.
+private func barRegion(edge: BarEdge, extent: CGFloat) -> BarRegion? {
+  guard #available(iOS 27.1, *), extent > 0, let view = flutterView() else { return nil }
+  let rectEdge: UIRectEdge
+  switch edge {
+  case .left: rectEdge = .left
+  case .top: rectEdge = .top
+  case .right: rectEdge = .right
+  case .bottom: rectEdge = .bottom
+  }
+  let guide = view.layoutGuide(for: .bar(onEdge: rectEdge, extent: extent))
+  view.layoutIfNeeded()
+  let frame = guide.layoutFrame
+  return BarRegion(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height)
 }

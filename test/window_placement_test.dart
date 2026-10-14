@@ -22,6 +22,10 @@ class MockWindowPlacementPlatform
   @override
   Stream<WindowPlacementInfo> get onPlacementChanged =>
       Stream.value(_fullscreen);
+
+  @override
+  Future<Rect?> getBarRegion(WindowEdge edge, double extent) =>
+      Future.value(Rect.fromLTWH(0, 16, 400, extent));
 }
 
 void main() {
@@ -42,4 +46,12 @@ void main() {
       expect(await detector.onPlacementChanged.first, _fullscreen);
     },
   );
+
+  test('getBarRegion delegates to the platform', () async {
+    WindowPlacementPlatform.instance = MockWindowPlacementPlatform();
+    expect(
+      await WindowPlacementDetector().getBarRegion(WindowEdge.top, 64),
+      const Rect.fromLTWH(0, 16, 400, 64),
+    );
+  });
 }

@@ -49,10 +49,33 @@ class WindowGeometry {
   bool isMultiWindow;
 }
 
+/// A physical edge of the app window.
+enum BarEdge { left, top, right, bottom }
+
+/// A rectangle in the app window's coordinates, in logical pixels.
+class BarRegion {
+  BarRegion({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  double x;
+  double y;
+  double width;
+  double height;
+}
+
 @HostApi()
 abstract class WindowPlacementHostApi {
   /// The current geometry, or null when no window is attached yet.
   WindowGeometry? getGeometry();
+
+  /// Where the system places a bar [extent] thick along [edge], clear of the
+  /// status icons, rounded corners and home indicator. Null where the platform
+  /// has no such API (before iOS 27.1, Android) or no window is attached yet.
+  BarRegion? getBarRegion(BarEdge edge, double extent);
 }
 
 @EventChannelApi()

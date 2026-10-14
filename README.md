@@ -48,6 +48,19 @@ StreamBuilder<WindowPlacementInfo>(
 - **Android:** phones in portrait and most tablets in portrait split `top` / `bottom`; landscape splits `left` / `right`. Freeform and desktop windows produce corners or `floating`.
   - A window that stops at the status bar or navigation bar still counts as touching that edge.
 
+## Bar regions
+
+`getBarRegion(edge, extent)` tells where the system places a bar of that thickness along a window edge, in Flutter's coordinates, clear of the status icons, the rounded corners and the home indicator:
+
+```dart
+final region = await WindowPlacementDetector().getBarRegion(WindowEdge.right, 64);
+// iPhone Duo, folded: Rect.fromLTWH(386, 170, 64, 474), below the status icons.
+```
+
+The safe area can't express this: on the iPhone Duo the status icons sit in a column at the side (or a band at the top in unfolded portrait), and `MediaQuery.padding` gives up that whole column or band. A bar region on that edge starts below the icons; a top bar region ends before them.
+
+It wraps `UIView.LayoutRegion.bar(onEdge:extent:)` and is null before iOS 27.1, on Android, and before a window is attached; fall back to `MediaQuery.padding` then. Regions change with rotation, folding and split screen, so ask again when the window changes.
+
 ## How it works
 
 1. **Native side measures.** Each platform reports the window's frame, the display's size and its system bar insets in logical pixels, in display coordinates. This goes over a typed [Pigeon](https://pub.dev/packages/pigeon) API (`WindowGeometry`), so Dart, Swift and Kotlin share one contract.

@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-  List<Object?>? replyList,
-  String channelName, {
-  required bool isNullValid,
+    List<Object?>? replyList,
+    String channelName, {
+    required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -46,9 +46,8 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed.every(
-          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
-        );
+        a.indexed
+            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -95,6 +94,15 @@ int _deepHash(Object? value) {
     return 0.0.hashCode;
   }
   return value.hashCode;
+}
+
+
+/// A physical edge of the app window.
+enum BarEdge {
+  left,
+  top,
+  right,
+  bottom,
 }
 
 /// The app window and the display it is on, in logical pixels and display
@@ -156,8 +164,7 @@ class WindowGeometry {
   }
 
   Object encode() {
-    return _toList();
-  }
+    return _toList();  }
 
   static WindowGeometry decode(Object result) {
     result as List<Object?>;
@@ -185,17 +192,7 @@ class WindowGeometry {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(windowX, other.windowX) &&
-        _deepEquals(windowY, other.windowY) &&
-        _deepEquals(windowWidth, other.windowWidth) &&
-        _deepEquals(windowHeight, other.windowHeight) &&
-        _deepEquals(screenWidth, other.screenWidth) &&
-        _deepEquals(screenHeight, other.screenHeight) &&
-        _deepEquals(screenInsetLeft, other.screenInsetLeft) &&
-        _deepEquals(screenInsetTop, other.screenInsetTop) &&
-        _deepEquals(screenInsetRight, other.screenInsetRight) &&
-        _deepEquals(screenInsetBottom, other.screenInsetBottom) &&
-        _deepEquals(isMultiWindow, other.isMultiWindow);
+    return _deepEquals(windowX, other.windowX) && _deepEquals(windowY, other.windowY) && _deepEquals(windowWidth, other.windowWidth) && _deepEquals(windowHeight, other.windowHeight) && _deepEquals(screenWidth, other.screenWidth) && _deepEquals(screenHeight, other.screenHeight) && _deepEquals(screenInsetLeft, other.screenInsetLeft) && _deepEquals(screenInsetTop, other.screenInsetTop) && _deepEquals(screenInsetRight, other.screenInsetRight) && _deepEquals(screenInsetBottom, other.screenInsetBottom) && _deepEquals(isMultiWindow, other.isMultiWindow);
   }
 
   @override
@@ -208,6 +205,68 @@ class WindowGeometry {
   }
 }
 
+/// A rectangle in the app window's coordinates, in logical pixels.
+class BarRegion {
+  BarRegion({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  double x;
+
+  double y;
+
+  double width;
+
+  double height;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      x,
+      y,
+      width,
+      height,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static BarRegion decode(Object result) {
+    result as List<Object?>;
+    return BarRegion(
+      x: result[0]! as double,
+      y: result[1]! as double,
+      width: result[2]! as double,
+      height: result[3]! as double,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! BarRegion || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(x, other.x) && _deepEquals(y, other.y) && _deepEquals(width, other.width) && _deepEquals(height, other.height);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'BarRegion(x: $x, y: $y, width: $width, height: $height)';
+  }
+}
+
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -215,8 +274,14 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    } else if (value is WindowGeometry) {
+    }    else if (value is BarEdge) {
       buffer.putUint8(129);
+      writeValue(buffer, value.index);
+    }    else if (value is WindowGeometry) {
+      buffer.putUint8(130);
+      writeValue(buffer, value.encode());
+    }    else if (value is BarRegion) {
+      buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -227,28 +292,27 @@ class _PigeonCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 129:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : BarEdge.values[value];
+      case 130:
         return WindowGeometry.decode(readValue(buffer)!);
+      case 131:
+        return BarRegion.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
   }
 }
 
-const StandardMethodCodec pigeonMethodCodec = StandardMethodCodec(
-  _PigeonCodec(),
-);
+const StandardMethodCodec pigeonMethodCodec = StandardMethodCodec(_PigeonCodec());
 
 class WindowPlacementHostApi {
   /// Constructor for [WindowPlacementHostApi]. The [binaryMessenger] named argument is
   /// available for dependency injection. If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  WindowPlacementHostApi({
-    BinaryMessenger? binaryMessenger,
-    String messageChannelSuffix = '',
-  }) : pigeonVar_binaryMessenger = binaryMessenger,
-       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
-           ? '.$messageChannelSuffix'
-           : '';
+  WindowPlacementHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+      : pigeonVar_binaryMessenger = binaryMessenger,
+        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -257,8 +321,7 @@ class WindowPlacementHostApi {
 
   /// The current geometry, or null when no window is attached yet.
   Future<WindowGeometry?> getGeometry() async {
-    final pigeonVar_channelName =
-        'dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getGeometry$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getGeometry$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -268,11 +331,34 @@ class WindowPlacementHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-      pigeonVar_replyList,
-      pigeonVar_channelName,
-      isNullValid: true,
-    );
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
     return pigeonVar_replyValue as WindowGeometry?;
+  }
+
+  /// Where the system places a bar [extent] thick along [edge], clear of the
+  /// status icons, rounded corners and home indicator. Null where the platform
+  /// has no such API (before iOS 27.1, Android) or no window is attached yet.
+  Future<BarRegion?> getBarRegion(BarEdge edge, double extent) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getBarRegion$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[edge, extent]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+    return pigeonVar_replyValue as BarRegion?;
   }
 }
 
@@ -284,15 +370,14 @@ class WindowPlacementHostApi {
 /// not be called multiple times for the same `instanceName`. To deliver
 /// events to multiple listeners, call this method once and listen to the
 /// returned broadcast stream multiple times instead.
-Stream<WindowGeometry> geometryChanges({String instanceName = ''}) {
+Stream<WindowGeometry> geometryChanges( {String instanceName = ''}) {
   if (instanceName.isNotEmpty) {
     instanceName = '.$instanceName';
   }
-  final EventChannel geometryChangesChannel = EventChannel(
-    'dev.flutter.pigeon.window_placement.WindowPlacementEventApi.geometryChanges$instanceName',
-    pigeonMethodCodec,
-  );
+  final EventChannel geometryChangesChannel =
+      EventChannel('dev.flutter.pigeon.window_placement.WindowPlacementEventApi.geometryChanges$instanceName', pigeonMethodCodec);
   return geometryChangesChannel.receiveBroadcastStream().map((dynamic event) {
     return event as WindowGeometry;
   });
 }
+    
