@@ -4,6 +4,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'window_placement_pigeon.dart';
 import 'src/window_edge.dart';
+import 'src/window_environment.dart';
 import 'src/window_placement_info.dart';
 
 /// The interface that platform implementations of window_placement extend.
@@ -42,4 +43,24 @@ abstract class WindowPlacementPlatform extends PlatformInterface {
   /// coordinates, or null where the platform has no such API. Defaults to
   /// null so implementations without it keep working.
   Future<Rect?> getBarRegion(WindowEdge edge, double extent) async => null;
+
+  /// Returns the current placement and native traits of the hosting window.
+  ///
+  /// Defaults to [getPlacement] without traits so implementations without it
+  /// keep working.
+  Future<WindowEnvironment> getEnvironment() async =>
+      _legacyEnvironment(await getPlacement());
+
+  /// Emits the current environment on listen and whenever it changes.
+  ///
+  /// Defaults to [onPlacementChanged] without traits, so it can't report
+  /// trait changes.
+  Stream<WindowEnvironment> get onEnvironmentChanged =>
+      onPlacementChanged.map(_legacyEnvironment).distinct();
+
+  static WindowEnvironment _legacyEnvironment(WindowPlacementInfo info) =>
+      WindowEnvironment(
+        placement: info == WindowPlacementInfo.unknown ? null : info,
+        iosTraits: null,
+      );
 }

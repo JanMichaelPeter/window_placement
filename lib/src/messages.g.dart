@@ -105,6 +105,22 @@ enum BarEdge {
   bottom,
 }
 
+/// A UIKit size class (`UIUserInterfaceSizeClass`).
+enum SizeClass {
+  compact,
+  regular,
+  unspecified,
+}
+
+/// A UIKit interface idiom (`UIUserInterfaceIdiom`). Idioms other than phone
+/// and pad, including ones added after this plugin, are [other].
+enum InterfaceIdiom {
+  phone,
+  pad,
+  other,
+  unspecified,
+}
+
 /// The app window and the display it is on, in logical pixels and display
 /// coordinates.
 class WindowGeometry {
@@ -266,6 +282,116 @@ class BarRegion {
   }
 }
 
+/// The UIKit traits of the view controller hosting the Flutter view.
+class WindowTraits {
+  WindowTraits({
+    required this.horizontalSizeClass,
+    required this.verticalSizeClass,
+    required this.interfaceIdiom,
+  });
+
+  SizeClass horizontalSizeClass;
+
+  SizeClass verticalSizeClass;
+
+  InterfaceIdiom interfaceIdiom;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      horizontalSizeClass,
+      verticalSizeClass,
+      interfaceIdiom,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static WindowTraits decode(Object result) {
+    result as List<Object?>;
+    return WindowTraits(
+      horizontalSizeClass: result[0]! as SizeClass,
+      verticalSizeClass: result[1]! as SizeClass,
+      interfaceIdiom: result[2]! as InterfaceIdiom,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! WindowTraits || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(horizontalSizeClass, other.horizontalSizeClass) && _deepEquals(verticalSizeClass, other.verticalSizeClass) && _deepEquals(interfaceIdiom, other.interfaceIdiom);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'WindowTraits(horizontalSizeClass: $horizontalSizeClass, verticalSizeClass: $verticalSizeClass, interfaceIdiom: $interfaceIdiom)';
+  }
+}
+
+/// The geometry and traits of the window hosting the Flutter view, read
+/// together.
+class WindowSnapshot {
+  WindowSnapshot({
+    this.geometry,
+    this.traits,
+  });
+
+  /// Null when the Flutter view is not in a window.
+  WindowGeometry? geometry;
+
+  /// Null when the Flutter view is not in a window, and on Android.
+  WindowTraits? traits;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      geometry,
+      traits,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static WindowSnapshot decode(Object result) {
+    result as List<Object?>;
+    return WindowSnapshot(
+      geometry: result[0] as WindowGeometry?,
+      traits: result[1] as WindowTraits?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! WindowSnapshot || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(geometry, other.geometry) && _deepEquals(traits, other.traits);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'WindowSnapshot(geometry: $geometry, traits: $traits)';
+  }
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -277,11 +403,23 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is BarEdge) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    }    else if (value is WindowGeometry) {
+    }    else if (value is SizeClass) {
       buffer.putUint8(130);
+      writeValue(buffer, value.index);
+    }    else if (value is InterfaceIdiom) {
+      buffer.putUint8(131);
+      writeValue(buffer, value.index);
+    }    else if (value is WindowGeometry) {
+      buffer.putUint8(132);
       writeValue(buffer, value.encode());
     }    else if (value is BarRegion) {
-      buffer.putUint8(131);
+      buffer.putUint8(133);
+      writeValue(buffer, value.encode());
+    }    else if (value is WindowTraits) {
+      buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    }    else if (value is WindowSnapshot) {
+      buffer.putUint8(135);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -295,9 +433,19 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : BarEdge.values[value];
       case 130:
-        return WindowGeometry.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : SizeClass.values[value];
       case 131:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : InterfaceIdiom.values[value];
+      case 132:
+        return WindowGeometry.decode(readValue(buffer)!);
+      case 133:
         return BarRegion.decode(readValue(buffer)!);
+      case 134:
+        return WindowTraits.decode(readValue(buffer)!);
+      case 135:
+        return WindowSnapshot.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -339,6 +487,26 @@ class WindowPlacementHostApi {
     return pigeonVar_replyValue as WindowGeometry?;
   }
 
+  /// The current geometry and traits of the window hosting the Flutter view.
+  Future<WindowSnapshot> getEnvironment() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getEnvironment$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as WindowSnapshot;
+  }
+
   /// Where the system places a bar [extent] thick along [edge], clear of the
   /// status icons, rounded corners and home indicator. Null where the platform
   /// has no such API (before iOS 27.1, Android) or no window is attached yet.
@@ -378,6 +546,26 @@ Stream<WindowGeometry> geometryChanges( {String instanceName = ''}) {
       EventChannel('dev.flutter.pigeon.window_placement.WindowPlacementEventApi.geometryChanges$instanceName', pigeonMethodCodec);
   return geometryChangesChannel.receiveBroadcastStream().map((dynamic event) {
     return event as WindowGeometry;
+  });
+}
+    
+/// Emits the environment on listen and whenever its geometry or traits
+/// change, including when the window goes away.
+///
+/// Returns a broadcast [Stream] of events from the `environmentChanges` event channel.
+///
+/// Each call to this method creates a new [EventChannel], so it should
+/// not be called multiple times for the same `instanceName`. To deliver
+/// events to multiple listeners, call this method once and listen to the
+/// returned broadcast stream multiple times instead.
+Stream<WindowSnapshot> environmentChanges( {String instanceName = ''}) {
+  if (instanceName.isNotEmpty) {
+    instanceName = '.$instanceName';
+  }
+  final EventChannel environmentChangesChannel =
+      EventChannel('dev.flutter.pigeon.window_placement.WindowPlacementEventApi.environmentChanges$instanceName', pigeonMethodCodec);
+  return environmentChangesChannel.receiveBroadcastStream().map((dynamic event) {
+    return event as WindowSnapshot;
   });
 }
     

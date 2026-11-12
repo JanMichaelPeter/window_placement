@@ -18,12 +18,15 @@ class WindowPlacementPlugin :
     private var activity: Activity? = null
     private var sink: PigeonEventSink<WindowGeometry>? = null
     private var lastGeometry: WindowGeometry? = null
+    private var environmentSink: PigeonEventSink<WindowSnapshot>? = null
+    private var lastEnvironment: WindowSnapshot? = null
 
     // Re-checks after every layout pass; covers split ratio changes, side swaps and rotation.
     private val layoutChangeListener =
         View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> emitIfChanged() }
     private val globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener { emitIfChanged() }
 
+    // Both streams share the layout listeners, which stay while either has a listener.
     private val geometryChanges =
         object : GeometryChangesStreamHandler() {
             override fun onListen(p0: Any?, sink: PigeonEventSink<WindowGeometry>) {
@@ -34,14 +37,30 @@ class WindowPlacementPlugin :
             }
 
             override fun onCancel(p0: Any?) {
-                removeListeners()
                 sink = null
+                if (environmentSink == null) removeListeners()
+            }
+        }
+
+    internal val environmentChanges =
+        object : EnvironmentChangesStreamHandler() {
+            override fun onListen(p0: Any?, sink: PigeonEventSink<WindowSnapshot>) {
+                environmentSink = sink
+                lastEnvironment = null
+                addListeners()
+                emitIfChanged()
+            }
+
+            override fun onCancel(p0: Any?) {
+                environmentSink = null
+                if (sink == null) removeListeners()
             }
         }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         WindowPlacementHostApi.setUp(binding.binaryMessenger, this)
         GeometryChangesStreamHandler.register(binding.binaryMessenger, geometryChanges)
+        EnvironmentChangesStreamHandler.register(binding.binaryMessenger, environmentChanges)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -50,6 +69,8 @@ class WindowPlacementPlugin :
 
     override fun getGeometry(): WindowGeometry? = currentGeometry()
 
+    override fun getEnvironment(): WindowSnapshot = currentEnvironment()
+
     // Android has no bar layout region; callers fall back to the safe area.
     override fun getBarRegion(edge: BarEdge, extent: Double): BarRegion? = null
 
@@ -57,20 +78,24 @@ class WindowPlacementPlugin :
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
-        if (sink != null) {
+        if (sink != null || environmentSink != null) {
             addListeners()
             emitIfChanged()
         }
     }
 
-    override fun onDetachedFromActivityForConfigChanges() = onDetachedFromActivity()
+    // The activity comes back right away, so the environment doesn't report it as gone.
+    override fun onDetachedFromActivityForConfigChanges() {
+        removeListeners()
+        activity = null
+    }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) =
         onAttachedToActivity(binding)
 
     override fun onDetachedFromActivity() {
-        removeListeners()
-        activity = null
+        onDetachedFromActivityForConfigChanges()
+        emitIfChanged()
     }
 
     // Geometry
@@ -97,6 +122,11 @@ class WindowPlacementPlugin :
         )
     }
 
+    // Android has no size classes, so there are no traits; width or orientation are not mapped
+    // to UIKit's.
+    private fun currentEnvironment(geometry: WindowGeometry? = currentGeometry()) =
+        WindowSnapshot(geometry = geometry, traits = null)
+
     /** System bars / cutouts of the display; windows docked to an edge may stop at these. */
     @SuppressLint("DiscouragedApi", "InternalInsetResource")
     private fun displayInsets(activity: Activity): Rect {
@@ -115,11 +145,19 @@ class WindowPlacementPlugin :
     }
 
     private fun emitIfChanged() {
-        val sink = sink ?: return
-        val geometry = currentGeometry() ?: return
-        if (geometry == lastGeometry) return
-        lastGeometry = geometry
-        sink.success(geometry)
+        if (sink == null && environmentSink == null) return
+        val geometry = currentGeometry()
+        val sink = sink
+        if (sink != null && geometry != null && geometry != lastGeometry) {
+            lastGeometry = geometry
+            sink.success(geometry)
+        }
+        val environmentSink = environmentSink
+        val environment = currentEnvironment(geometry)
+        if (environmentSink != null && environment != lastEnvironment) {
+            lastEnvironment = environment
+            environmentSink.success(environment)
+        }
     }
 
     private fun addListeners() {

@@ -206,6 +206,36 @@ enum class BarEdge(val raw: Int) {
   }
 }
 
+/** A UIKit size class (`UIUserInterfaceSizeClass`). */
+enum class SizeClass(val raw: Int) {
+  COMPACT(0),
+  REGULAR(1),
+  UNSPECIFIED(2);
+
+  companion object {
+    fun ofRaw(raw: Int): SizeClass? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
+/**
+ * A UIKit interface idiom (`UIUserInterfaceIdiom`). Idioms other than phone
+ * and pad, including ones added after this plugin, are [other].
+ */
+enum class InterfaceIdiom(val raw: Int) {
+  PHONE(0),
+  PAD(1),
+  OTHER(2),
+  UNSPECIFIED(3);
+
+  companion object {
+    fun ofRaw(raw: Int): InterfaceIdiom? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /**
  * The app window and the display it is on, in logical pixels and display
  * coordinates.
@@ -345,6 +375,103 @@ data class BarRegion (
     return "BarRegion(x=$x, y=$y, width=$width, height=$height)"
   }
 }
+
+/**
+ * The UIKit traits of the view controller hosting the Flutter view.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class WindowTraits (
+  val horizontalSizeClass: SizeClass,
+  val verticalSizeClass: SizeClass,
+  val interfaceIdiom: InterfaceIdiom
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): WindowTraits {
+      val horizontalSizeClass = pigeonVar_list[0] as SizeClass
+      val verticalSizeClass = pigeonVar_list[1] as SizeClass
+      val interfaceIdiom = pigeonVar_list[2] as InterfaceIdiom
+      return WindowTraits(horizontalSizeClass, verticalSizeClass, interfaceIdiom)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      horizontalSizeClass,
+      verticalSizeClass,
+      interfaceIdiom,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as WindowTraits
+    return MessagesPigeonUtils.deepEquals(this.horizontalSizeClass, other.horizontalSizeClass) && MessagesPigeonUtils.deepEquals(this.verticalSizeClass, other.verticalSizeClass) && MessagesPigeonUtils.deepEquals(this.interfaceIdiom, other.interfaceIdiom)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.horizontalSizeClass)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.verticalSizeClass)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.interfaceIdiom)
+    return result
+  }
+  override fun toString(): String {
+    return "WindowTraits(horizontalSizeClass=$horizontalSizeClass, verticalSizeClass=$verticalSizeClass, interfaceIdiom=$interfaceIdiom)"
+  }
+}
+
+/**
+ * The geometry and traits of the window hosting the Flutter view, read
+ * together.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class WindowSnapshot (
+  /** Null when the Flutter view is not in a window. */
+  val geometry: WindowGeometry? = null,
+  /** Null when the Flutter view is not in a window, and on Android. */
+  val traits: WindowTraits? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): WindowSnapshot {
+      val geometry = pigeonVar_list[0] as WindowGeometry?
+      val traits = pigeonVar_list[1] as WindowTraits?
+      return WindowSnapshot(geometry, traits)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      geometry,
+      traits,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as WindowSnapshot
+    return MessagesPigeonUtils.deepEquals(this.geometry, other.geometry) && MessagesPigeonUtils.deepEquals(this.traits, other.traits)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.geometry)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.traits)
+    return result
+  }
+  override fun toString(): String {
+    return "WindowSnapshot(geometry=$geometry, traits=$traits)"
+  }
+}
 private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -354,13 +481,33 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         }
       }
       130.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          SizeClass.ofRaw(it.toInt())
+        }
+      }
+      131.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          InterfaceIdiom.ofRaw(it.toInt())
+        }
+      }
+      132.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           WindowGeometry.fromList(it)
         }
       }
-      131.toByte() -> {
+      133.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           BarRegion.fromList(it)
+        }
+      }
+      134.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          WindowTraits.fromList(it)
+        }
+      }
+      135.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          WindowSnapshot.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -372,12 +519,28 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(129)
         writeValue(stream, value.raw.toLong())
       }
-      is WindowGeometry -> {
+      is SizeClass -> {
         stream.write(130)
+        writeValue(stream, value.raw.toLong())
+      }
+      is InterfaceIdiom -> {
+        stream.write(131)
+        writeValue(stream, value.raw.toLong())
+      }
+      is WindowGeometry -> {
+        stream.write(132)
         writeValue(stream, value.toList())
       }
       is BarRegion -> {
-        stream.write(131)
+        stream.write(133)
+        writeValue(stream, value.toList())
+      }
+      is WindowTraits -> {
+        stream.write(134)
+        writeValue(stream, value.toList())
+      }
+      is WindowSnapshot -> {
+        stream.write(135)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -391,6 +554,8 @@ val MessagesPigeonMethodCodec = StandardMethodCodec(MessagesPigeonCodec())
 interface WindowPlacementHostApi {
   /** The current geometry, or null when no window is attached yet. */
   fun getGeometry(): WindowGeometry?
+  /** The current geometry and traits of the window hosting the Flutter view. */
+  fun getEnvironment(): WindowSnapshot
   /**
    * Where the system places a bar [extent] thick along [edge], clear of the
    * status icons, rounded corners and home indicator. Null where the platform
@@ -413,6 +578,21 @@ interface WindowPlacementHostApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.getGeometry())
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.window_placement.WindowPlacementHostApi.getEnvironment$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.getEnvironment())
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)
             }
@@ -493,6 +673,23 @@ abstract class GeometryChangesStreamHandler : MessagesPigeonEventChannelWrapper<
   }
 // Implement methods from MessagesPigeonEventChannelWrapper
 override fun onListen(p0: Any?, sink: PigeonEventSink<WindowGeometry>) {}
+
+override fun onCancel(p0: Any?) {}
+}
+      
+abstract class EnvironmentChangesStreamHandler : MessagesPigeonEventChannelWrapper<WindowSnapshot> {
+  companion object {
+    fun register(messenger: BinaryMessenger, streamHandler: EnvironmentChangesStreamHandler, instanceName: String = "") {
+      var channelName: String = "dev.flutter.pigeon.window_placement.WindowPlacementEventApi.environmentChanges"
+      if (instanceName.isNotEmpty()) {
+        channelName += ".$instanceName"
+      }
+      val internalStreamHandler = MessagesPigeonStreamHandler<WindowSnapshot>(streamHandler)
+      EventChannel(messenger, channelName, MessagesPigeonMethodCodec).setStreamHandler(internalStreamHandler)
+    }
+  }
+// Implement methods from MessagesPigeonEventChannelWrapper
+override fun onListen(p0: Any?, sink: PigeonEventSink<WindowSnapshot>) {}
 
 override fun onCancel(p0: Any?) {}
 }

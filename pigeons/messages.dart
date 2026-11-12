@@ -67,10 +67,45 @@ class BarRegion {
   double height;
 }
 
+/// A UIKit size class (`UIUserInterfaceSizeClass`).
+enum SizeClass { compact, regular, unspecified }
+
+/// A UIKit interface idiom (`UIUserInterfaceIdiom`). Idioms other than phone
+/// and pad, including ones added after this plugin, are [other].
+enum InterfaceIdiom { phone, pad, other, unspecified }
+
+/// The UIKit traits of the view controller hosting the Flutter view.
+class WindowTraits {
+  WindowTraits({
+    required this.horizontalSizeClass,
+    required this.verticalSizeClass,
+    required this.interfaceIdiom,
+  });
+
+  SizeClass horizontalSizeClass;
+  SizeClass verticalSizeClass;
+  InterfaceIdiom interfaceIdiom;
+}
+
+/// The geometry and traits of the window hosting the Flutter view, read
+/// together.
+class WindowSnapshot {
+  WindowSnapshot({this.geometry, this.traits});
+
+  /// Null when the Flutter view is not in a window.
+  WindowGeometry? geometry;
+
+  /// Null when the Flutter view is not in a window, and on Android.
+  WindowTraits? traits;
+}
+
 @HostApi()
 abstract class WindowPlacementHostApi {
   /// The current geometry, or null when no window is attached yet.
   WindowGeometry? getGeometry();
+
+  /// The current geometry and traits of the window hosting the Flutter view.
+  WindowSnapshot getEnvironment();
 
   /// Where the system places a bar [extent] thick along [edge], clear of the
   /// status icons, rounded corners and home indicator. Null where the platform
@@ -82,4 +117,8 @@ abstract class WindowPlacementHostApi {
 abstract class WindowPlacementEventApi {
   /// Emits the geometry on listen and whenever it changes.
   WindowGeometry geometryChanges();
+
+  /// Emits the environment on listen and whenever its geometry or traits
+  /// change, including when the window goes away.
+  WindowSnapshot environmentChanges();
 }

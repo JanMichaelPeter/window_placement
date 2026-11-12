@@ -13,14 +13,22 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         body: Center(
-          child: StreamBuilder<WindowPlacementInfo>(
-            stream: WindowPlacementDetector().onPlacementChanged,
+          child: StreamBuilder<WindowEnvironment>(
+            stream: WindowPlacementDetector().onEnvironmentChanged,
             builder: (context, snapshot) {
-              final info = snapshot.data ?? WindowPlacementInfo.unknown;
+              final environment = snapshot.data;
+              final info =
+                  environment?.placement ?? WindowPlacementInfo.unknown;
+              final traits = environment?.iosTraits;
               final windowBounds = info.windowBounds;
               final screenBounds = info.screenBounds;
               String n(double v) => v.toStringAsFixed(1);
               String b(bool v) => v ? 'yes' : 'no';
+              final traitsLine = traits == null
+                  ? 'no iOS traits'
+                  : 'size class H ${traits.horizontalSizeClass.name}  '
+                        'V ${traits.verticalSizeClass.name}  '
+                        'idiom ${traits.interfaceIdiom.name}';
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -39,7 +47,8 @@ class MyApp extends StatelessWidget {
                     'T ${b(info.touchesTopEdge)}  '
                     'R ${b(info.touchesRightEdge)}  '
                     'B ${b(info.touchesBottomEdge)}\n'
-                    'screen ${n(screenBounds.width)} × ${n(screenBounds.height)}  '
+                    'screen ${n(screenBounds.width)} × ${n(screenBounds.height)}\n'
+                    '$traitsLine\n'
                     'updated ${DateTime.now().toIso8601String().substring(11, 19)}',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

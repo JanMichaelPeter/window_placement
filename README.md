@@ -61,6 +61,35 @@ The safe area can't express this: on the iPhone Duo the status icons sit in a co
 
 It wraps `UIView.LayoutRegion.bar(onEdge:extent:)` and is null before iOS 27.1, on Android, and before a window is attached; fall back to `MediaQuery.padding` then. Regions change with rotation, folding and split screen, so ask again when the window changes.
 
+## Window environment
+
+`getEnvironment()` and `onEnvironmentChanged` report the placement together with the UIKit traits of the view controller hosting the Flutter view, which `MediaQuery` doesn't expose: horizontal and vertical size class and interface idiom. Both are read from the same window in the same update.
+
+```dart
+final detector = WindowPlacementDetector();
+
+final environment = await detector.getEnvironment();
+
+detector.onEnvironmentChanged.listen((environment) {
+  final traits = environment.iosTraits;
+  final width = environment.placement?.windowBounds.width;
+  // Your layout policy decides what to do with these.
+});
+```
+
+| Value | Meaning |
+|---|---|
+| `placement == null` | No window shows the Flutter view (not attached yet, or detached). Never a made-up zero-sized window. |
+| `iosTraits == null` | No window, or Android, which has no size classes. Android width or orientation are not mapped to UIKit's. |
+| `IosSizeClass.unspecified` / `IosInterfaceIdiom.unspecified` | UIKit reports traits but hasn't resolved this one. |
+| `IosInterfaceIdiom.other` | Mac Catalyst, CarPlay, TV, vision, or an idiom added later. Not a tablet. |
+
+The stream emits the current environment on listen, then whenever the geometry or a trait changes, including trait-only changes with the same window size. Equal environments are not repeated. Native failures reach the caller or the stream as errors rather than as an unavailable environment. Listeners share one native subscription; the last cancel stops the native observation, and the next listen starts over with the current environment.
+
+These are platform facts, not layout advice. A `regular` horizontal size class doesn't mean you should show a navigation rail, and `getBarRegion(edge, extent)` measures the edge you pick rather than recommending one. A native `UITabBarController` decides its own presentation, which also depends on its configuration, so these traits can't tell where iOS would put a tab bar.
+
+Platform implementations that don't override the new methods get defaults built on `getPlacement()` and `onPlacementChanged`, with `iosTraits: null`; those defaults can't report trait changes.
+
 ## How it works
 
 1. **Native side measures.** Each platform reports the window's frame, the display's size and its system bar insets in logical pixels, in display coordinates. This goes over a typed [Pigeon](https://pub.dev/packages/pigeon) API (`WindowGeometry`), so Dart, Swift and Kotlin share one contract.
@@ -69,11 +98,14 @@ It wraps `UIView.LayoutRegion.bar(onEdge:extent:)` and is null before iOS 27.1, 
 
 ### iOS (15+)
 
+- **Which window:** the one showing this engine's Flutter view (`FlutterPluginRegistrar.viewController`), so other scenes and engines don't take over. Without a Flutter view (headless engines), `getPlacement`, `onPlacementChanged` and `getBarRegion` read the foreground window; the environment is unavailable.
+- **Traits:** `traitCollection` of that view controller.
 - **Measuring:** the window's bounds are converted to `screen.fixedCoordinateSpace`, then to `screen.coordinateSpace`, and compared with `screen.bounds`. Converting straight to `screen.coordinateSpace` returns scene-relative coordinates (origin always at zero) in split screen on iOS 27.
 - **Watching for changes:**
   - On iOS 16+, the scene's `effectiveGeometry` is observed, so resizing, rotation and split changes are reported immediately.
-  - While a listener is attached, the frame is also polled 4 times a second, because dragging an iPadOS window moves it without any public callback.
-  - An event is sent only when the geometry actually changed.
+  - On iOS 17+, the size classes and idiom are observed with `registerForTraitChanges`.
+  - While a listener is attached, the frame and traits are also polled 4 times a second, because dragging an iPadOS window moves it without any public callback. This also catches trait changes before iOS 17 and the view leaving its window.
+  - Both streams share these observers. An event is sent only when that stream's value changed, so trait-only changes don't repeat placements.
 
 ### Android (API 24+)
 
