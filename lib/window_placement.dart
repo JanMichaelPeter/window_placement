@@ -2,9 +2,11 @@ import 'dart:ui' show Rect;
 
 import 'window_placement_platform_interface.dart';
 import 'src/window_edge.dart';
+import 'src/window_environment.dart';
 import 'src/window_placement_info.dart';
 
 export 'src/window_edge.dart';
+export 'src/window_environment.dart';
 export 'src/window_placement_info.dart';
 
 /// Tells where on the display the app window is shown
@@ -36,5 +38,21 @@ class WindowPlacementDetector {
   /// when [onPlacementChanged] emits or the window size changes.
   Future<Rect?> getBarRegion(WindowEdge edge, double extent) {
     return WindowPlacementPlatform.instance.getBarRegion(edge, extent);
+  }
+
+  /// Returns the placement and native traits of the window hosting the
+  /// Flutter view, read together from that window.
+  ///
+  /// [WindowEnvironment.placement] is null while no window hosts the view;
+  /// [WindowEnvironment.iosTraits] is null then and on Android.
+  Future<WindowEnvironment> getEnvironment() {
+    return WindowPlacementPlatform.instance.getEnvironment();
+  }
+
+  /// Emits the current environment on listen and whenever the geometry or the
+  /// iOS traits change, including when the window goes away. Equal
+  /// environments are not repeated.
+  Stream<WindowEnvironment> get onEnvironmentChanged {
+    return WindowPlacementPlatform.instance.onEnvironmentChanged;
   }
 }
